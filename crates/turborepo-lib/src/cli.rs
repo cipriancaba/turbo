@@ -750,7 +750,7 @@ pub async fn run(
             Ok(Payload::Rust(Ok(0)))
         }
         #[cfg(feature = "run-stub")]
-        Command::Run(args) => {
+        Command::Run(_) => {
             let base = CommandBase::new(cli_args, repo_root, version, ui)?;
             run::run(base).await?;
 

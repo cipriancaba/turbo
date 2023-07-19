@@ -7,7 +7,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use petgraph::visit::EdgeRef;
 use turbopath::{AbsoluteSystemPath, AnchoredSystemPathBuf};
-use turborepo_lockfiles::Lockfile;
+use turborepo_lockfiles::{Lockfile, Package};
 
 use crate::{package_json::PackageJson, package_manager::PackageManager};
 
@@ -271,7 +271,7 @@ mod test {
             .as_ref()
             .unwrap();
         assert!(b_external.contains(&Package {
-            name: "c".into(),
+            key: "c".into(),
             version: "1.2.3".into()
         }));
     }

@@ -30,7 +30,7 @@ impl EnvironmentVariableMap {
     }
 
     pub fn names(&self) -> Vec<String> {
-        let mut names = self.keys().cloned().collect();
+        let mut names: Vec<_> = self.keys().cloned().collect();
         names.sort();
 
         names

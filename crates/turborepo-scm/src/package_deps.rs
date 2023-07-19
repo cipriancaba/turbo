@@ -18,9 +18,9 @@ impl SCM {
         allow_missing: bool,
     ) -> Result<GitHashes, Error> {
         if allow_missing {
-            hasher.hash_existing_of(&turbo_root, files.into_iter())
+            self.hash_existing_of(&turbo_root, files.into_iter())
         } else {
-            hasher.hash_files(&turbo_root, files.into_iter())
+            self.hash_files(&turbo_root, files.into_iter())
         }
     }
 
@@ -55,7 +55,7 @@ impl SCM {
     pub fn hash_files(
         &self,
         turbo_root: &AbsoluteSystemPath,
-        files: impl Iterator<Item = AnchoredSystemPathBuf>,
+        files: impl Iterator<Item = impl AsRef<AnchoredSystemPath>>,
     ) -> Result<GitHashes, Error> {
         match self {
             SCM::Manual => crate::manual::hash_files(turbo_root, files, false),
@@ -69,7 +69,7 @@ impl SCM {
     pub fn hash_existing_of(
         &self,
         turbo_root: &AbsoluteSystemPath,
-        files: impl Iterator<Item = AnchoredSystemPathBuf>,
+        files: impl Iterator<Item = impl AsRef<AnchoredSystemPath>>,
     ) -> Result<GitHashes, Error> {
         crate::manual::hash_files(turbo_root, files, true)
     }
@@ -107,11 +107,15 @@ impl Git {
     fn hash_files(
         &self,
         process_relative_to: &AbsoluteSystemPath,
-        files: impl Iterator<Item = AnchoredSystemPathBuf>,
+        files: impl Iterator<Item = impl AsRef<AnchoredSystemPath>>,
     ) -> Result<GitHashes, Error> {
         let mut hashes = GitHashes::new();
         let to_hash = files
-            .map(|f| self.root.anchor(process_relative_to.resolve(&f))?.to_unix())
+            .map(|f| {
+                self.root
+                    .anchor(process_relative_to.resolve(f.as_ref()))?
+                    .to_unix()
+            })
             .collect::<Result<Vec<_>, PathError>>()?;
         // Note: to_hash is *git repo relative*
         hash_objects(&self.root, process_relative_to, to_hash, &mut hashes)?;
