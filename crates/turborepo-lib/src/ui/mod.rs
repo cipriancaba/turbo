@@ -29,7 +29,7 @@ pub fn start_spinner(message: &str) -> ProgressBar {
 }
 
 /// Helper struct to apply any necessary formatting to UI output
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct UI {
     pub should_strip_ansi: bool,
 }
