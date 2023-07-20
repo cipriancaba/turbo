@@ -102,7 +102,8 @@ impl Run {
         // }
         let env_at_execution_start = EnvironmentVariableMap::infer();
 
-        let root_external_dependencies = pkg_dep_graph.external_dependencies(&WorkspaceName::Root);
+        let root_external_dependencies =
+            pkg_dep_graph.transitive_external_dependencies(std::iter::once(&WorkspaceName::Root));
 
         let global_hash_inputs = get_global_hash_inputs(
             root_external_dependencies,
@@ -121,8 +122,6 @@ impl Run {
         )?;
 
         let global_hash = global_hash_inputs.calculate_global_hash_from_inputs();
-
-        println!("global hash: {:#x}", global_hash);
 
         Ok(())
     }
@@ -145,7 +144,8 @@ impl Run {
         let root_turbo_json =
             TurboJson::load(&self.base.repo_root, &root_package_json, is_single_package)?;
 
-        let root_external_dependencies = pkg_dep_graph.external_dependencies(&WorkspaceName::Root);
+        let root_external_dependencies =
+            pkg_dep_graph.transitive_external_dependencies(std::iter::once(&WorkspaceName::Root));
 
         let global_hash_inputs = get_global_hash_inputs(
             root_external_dependencies,

@@ -9,6 +9,7 @@ mod traits;
 use std::collections::HashMap;
 
 use capnp::message::{Builder, HeapAllocator};
+use serde::Serialize;
 pub use traits::TurboHash;
 
 use crate::cli::EnvMode;
@@ -125,8 +126,8 @@ impl From<LockFilePackages> for Builder<HeapAllocator> {
                 let mut package = packages_builder.reborrow().get(i as u32);
                 package.set_key(key);
                 package.set_version(version);
-                // we don't track this in rust, set it to false
-                package.set_found(false);
+                // we don't track this in rust, set it to true
+                package.set_found(true);
             }
         }
 
@@ -284,7 +285,7 @@ impl From<GlobalHashable> for Builder<HeapAllocator> {
             }
         }
 
-        builder.set_root_external_deps_hash(&hashable.root_external_deps_hash);
+        builder.set_root_external_deps_hash(hashable.root_external_dependencies_hash);
 
         {
             let mut entries = builder.reborrow().init_env(hashable.env.len() as u32);

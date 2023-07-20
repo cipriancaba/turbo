@@ -7,7 +7,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use petgraph::visit::EdgeRef;
 use turbopath::{AbsoluteSystemPath, AnchoredSystemPathBuf};
-use turborepo_lockfiles::{Lockfile, Package};
+use turborepo_lockfiles::Lockfile;
 
 use crate::{package_json::PackageJson, package_manager::PackageManager};
 
@@ -158,6 +158,12 @@ impl PackageGraph {
             .filter_map(|entry| entry.transitive_dependencies.as_ref())
             .flatten()
             .collect()
+    }
+
+    #[allow(dead_code)]
+    fn external_dependencies(&self, workspace: &WorkspaceName) -> Option<&HashSet<Package>> {
+        let entry = self.workspaces.get(workspace)?;
+        entry.unresolved_external_dependencies.as_ref()
     }
 }
 

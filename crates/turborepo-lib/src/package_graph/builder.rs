@@ -393,7 +393,9 @@ impl<'a> BuildState<'a, ResolvedLockfile> {
                     .as_ref()
                     .map(|deps| {
                         deps.iter()
-                            .map(|Package { key, version }| (key.to_string(), version.to_string()))
+                            .map(|Package { name, version }| {
+                                (name.to_string(), version.to_string())
+                            })
                             .collect()
                     })
                     .unwrap_or_default();
@@ -467,7 +469,7 @@ impl Dependencies {
                 internal.insert(workspace);
             } else {
                 external.insert(Package {
-                    key: name.clone(),
+                    name: name.clone(),
                     version: version.clone(),
                 });
             }

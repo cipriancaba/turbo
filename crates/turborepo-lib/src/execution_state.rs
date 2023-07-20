@@ -54,7 +54,7 @@ impl<'a> TryFrom<&'a CommandBase> for ExecutionState<'a> {
         };
 
         Ok(ExecutionState {
-            global_hash: hex::encode(global_hash.to_le_bytes()),
+            global_hash: hex::encode(global_hash.to_be_bytes()),
             api_client_config,
             package_manager,
             cli_args: base.args(),

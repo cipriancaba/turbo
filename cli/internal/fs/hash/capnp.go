@@ -10,7 +10,9 @@
 package hash
 
 import (
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	capnp "capnproto.org/go/capnp/v3"
@@ -291,7 +293,7 @@ func HashGlobalHashable(global *GlobalHashable) (string, error) {
 	return HashMessage(globalMsg.Message())
 }
 
-func HashLockfilePackages(packages []lockfile.Package) (string, error) {
+func HashLockfilePackages(packages []lockfile.Package, isRoot bool) (string, error) {
 	arena := capnp.SingleSegment(nil)
 
 	_, seg, err := capnp.NewMessage(arena)
@@ -367,6 +369,23 @@ func HashFileHashes(fileHashes map[turbopath.AnchoredUnixPath]string) (string, e
 }
 
 // HashMessage hashes a capnp message using xxhash
+func HashMessage2(msg *capnp.Message) (string, error) {
+	bytes, err := msg.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Printf("\n\ngo buffer: %+v\n\n\n", bytes)
+	digest := xxhash.New()
+	digest.Write(bytes)
+	out := digest.Sum(nil)
+
+	fmt.Printf("go external deps hash big: %v\n", binary.BigEndian.Uint64(out))
+	fmt.Printf("go external deps hash little: %v\n", binary.LittleEndian.Uint64(out))
+
+	return hex.EncodeToString(out), nil
+}
+
 func HashMessage(msg *capnp.Message) (string, error) {
 	root, err := msg.Root()
 	if err != nil {

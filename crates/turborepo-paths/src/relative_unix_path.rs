@@ -44,7 +44,7 @@ impl RelativeUnixPath {
         }
     }
 
-    pub fn to_system_path(&self) -> AnchoredSystemPathBuf {
+    pub fn to_anchored_system_path_buf(&self) -> AnchoredSystemPathBuf {
         AnchoredSystemPathBuf(self.to_system_path_buf())
     }
 

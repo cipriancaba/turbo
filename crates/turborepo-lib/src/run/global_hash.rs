@@ -6,7 +6,7 @@ use thiserror::Error;
 use tracing::debug;
 use turbopath::{AbsoluteSystemPath, RelativeUnixPathBuf};
 use turborepo_env::{get_global_hashable_env_vars, DetailedMap, EnvironmentVariableMap};
-use turborepo_lockfiles::{transitive_closure, Lockfile, Package};
+use turborepo_lockfiles::Lockfile;
 use turborepo_scm::SCM;
 
 use crate::{
@@ -25,11 +25,11 @@ const GLOBAL_CACHE_KEY: &str = "You don't understand! I coulda had class. I coul
 #[derive(Debug, Error)]
 enum GlobalHashError {}
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct GlobalHashableInputs {
     global_cache_key: &'static str,
     global_file_hash_map: HashMap<RelativeUnixPathBuf, String>,
-    root_external_dependencies_hash: u64,
+    pub root_external_dependencies_hash: u64,
     env: Vec<String>,
     // Only Option to allow #[derive(Default)]
     resolved_env_vars: Option<DetailedMap>,
@@ -39,26 +39,9 @@ pub struct GlobalHashableInputs {
     dot_env: Vec<RelativeUnixPathBuf>,
 }
 
-// We'll generalize this to all of the external deps later
-fn get_root_external_dependencies_hash<L: ?Sized + Lockfile>(
-    lockfile: &L,
-    unresolved_external_dependencies: &HashSet<Package>,
-    repo_root: &AbsoluteSystemPath,
-    root_package_json: &PackageJson,
-) -> Result<u64> {
-    let unresolved_deps = unresolved_external_dependencies
-        .iter()
-        .map(|pkg| (pkg.key.clone(), pkg.version.clone()))
-        .collect();
-
-    let closure = transitive_closure(lockfile, repo_root.as_str(), unresolved_deps)?;
-
-    Ok(root_package_json.get_external_deps_hash(closure))
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn get_global_hash_inputs<L: ?Sized + Lockfile>(
-    unresolved_root_external_dependencies: Option<&HashSet<Package>>,
+    root_external_dependencies: HashSet<&turborepo_lockfiles::Package>,
     root_path: &AbsoluteSystemPath,
     root_package_json: &PackageJson,
     package_manager: &PackageManager,
@@ -115,35 +98,30 @@ pub fn get_global_hash_inputs<L: ?Sized + Lockfile>(
         hasher.get_hashes_for_files(root_path, &global_deps_paths, false)?;
 
     if !dot_env.is_empty() {
-        let system_dot_env = dot_env
-            .iter()
-            .map(|p| p.to_system_path())
-            .collect::<Result<Vec<_>, _>>()?;
+        let system_dot_env = dot_env.iter().map(|p| p.to_anchored_system_path_buf());
 
-        let dot_env_object = hasher.hash_existing_of(root_path, system_dot_env.into_iter())?;
+        let dot_env_object = hasher.hash_existing_of(root_path, system_dot_env)?;
 
         for (key, value) in dot_env_object {
             global_file_hash_map.insert(key, value);
         }
     }
 
-    let root_external_dependencies_hash = lockfile
-        .zip(unresolved_root_external_dependencies)
-        .map(|(lockfile, unresolved_root_external_dependencies)| {
-            get_root_external_dependencies_hash(
-                lockfile,
-                unresolved_root_external_dependencies,
-                root_path,
-                root_package_json,
-            )
-        })
-        .transpose()?
-        .unwrap_or_default();
+    let root_external_dependencies_hash =
+        root_package_json.get_external_deps_hash(root_external_dependencies);
+
+    debug!(
+        "rust external deps hash: {}",
+        hex::encode(root_external_dependencies_hash.to_le_bytes())
+    );
+
+    let root_external_dependencies_hash =
+        hex::encode(root_external_dependencies_hash.to_be_bytes());
 
     Ok(GlobalHashableInputs {
         global_cache_key: GLOBAL_CACHE_KEY,
         global_file_hash_map,
-        root_external_dependencies_hash,
+        root_external_dependencies_hash: 0,
         env: global_env,
         resolved_env_vars: Some(global_hashable_env_vars),
         pass_through_env: Some(global_pass_through_env),
@@ -156,7 +134,12 @@ pub fn get_global_hash_inputs<L: ?Sized + Lockfile>(
 impl GlobalHashableInputs {
     pub fn calculate_global_hash_from_inputs(mut self) -> u64 {
         match self.env_mode {
-            EnvMode::Infer if self.pass_through_env.is_some() => {
+            EnvMode::Infer
+                if self
+                    .pass_through_env
+                    .as_ref()
+                    .map_or(false, |env| !env.is_empty()) =>
+            {
                 self.env_mode = EnvMode::Strict;
             }
             EnvMode::Loose => {
@@ -189,10 +172,6 @@ impl GlobalHashableInputs {
             dot_env: self.dot_env,
         };
 
-        global_hashable.hash()
+        global_hashable.hash(false)
     }
-}
-
-fn hash_global(_hashable: GlobalHashable) -> Result<String, GlobalHashError> {
-    todo!()
 }
