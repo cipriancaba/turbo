@@ -66,13 +66,13 @@ pub enum RawVc {
 }
 
 impl RawVc {
-    pub fn into_read<T: VcValueType>(self) -> ReadRawVcFuture<T, VcValueTypeCast<T>> {
+    pub(crate) fn into_read<T: VcValueType>(self) -> ReadRawVcFuture<T, VcValueTypeCast<T>> {
         // returns a custom future to have something concrete and sized
         // this avoids boxing in IntoFuture
         ReadRawVcFuture::new(self)
     }
 
-    pub fn into_strongly_consistent_read<T: VcValueType>(
+    pub(crate) fn into_strongly_consistent_read<T: VcValueType>(
         self,
     ) -> ReadRawVcFuture<T, VcValueTypeCast<T>> {
         // returns a custom future to have something concrete and sized
@@ -80,7 +80,7 @@ impl RawVc {
         ReadRawVcFuture::new_strongly_consistent(self)
     }
 
-    pub fn into_trait_read<T: VcValueTrait + ?Sized>(
+    pub(crate) fn into_trait_read<T: VcValueTrait + ?Sized>(
         self,
     ) -> ReadRawVcFuture<T, VcValueTraitCast<T>> {
         // returns a custom future to have something concrete and sized
@@ -88,7 +88,7 @@ impl RawVc {
         ReadRawVcFuture::new(self)
     }
 
-    pub fn into_strongly_consistent_trait_read<T: VcValueTrait + Sized>(
+    pub(crate) fn into_strongly_consistent_trait_read<T: VcValueTrait + Sized>(
         self,
     ) -> ReadRawVcFuture<T, VcValueTraitCast<T>> {
         // returns a custom future to have something concrete and sized
@@ -98,7 +98,7 @@ impl RawVc {
 
     /// INVALIDATION: Be careful with this, it will not track dependencies, so
     /// using it could break cache invalidation.
-    pub async fn into_read_untracked<T: Any + VcValueType>(
+    pub(crate) async fn into_read_untracked<T: Any + VcValueType>(
         self,
         turbo_tasks: &dyn TurboTasksApi,
     ) -> Result<ReadRef<T>> {
@@ -109,7 +109,7 @@ impl RawVc {
 
     /// INVALIDATION: Be careful with this, it will not track dependencies, so
     /// using it could break cache invalidation.
-    pub async fn into_strongly_consistent_read_untracked<T: Any + VcValueType>(
+    pub(crate) async fn into_strongly_consistent_read_untracked<T: Any + VcValueType>(
         self,
         turbo_tasks: &dyn TurboTasksApi,
     ) -> Result<ReadRef<T>> {
@@ -123,7 +123,7 @@ impl RawVc {
     ///
     /// INVALIDATION: Be careful with this, it will not track dependencies, so
     /// using it could break cache invalidation.
-    pub async fn internal_pointer_untracked(
+    pub(crate) async fn internal_pointer_untracked(
         self,
         turbo_tasks: &dyn TurboTasksApi,
     ) -> Result<SharedReference> {
@@ -152,7 +152,7 @@ impl RawVc {
         }
     }
 
-    pub async fn resolve_trait(
+    pub(crate) async fn resolve_trait(
         self,
         trait_type: TraitTypeId,
     ) -> Result<Option<RawVc>, ResolveTypeError> {
@@ -188,7 +188,7 @@ impl RawVc {
         }
     }
 
-    pub async fn resolve_value(
+    pub(crate) async fn resolve_value(
         self,
         value_type: ValueTypeId,
     ) -> Result<Option<RawVc>, ResolveTypeError> {
@@ -225,7 +225,7 @@ impl RawVc {
     }
 
     /// See [`crate::Vc::resolve`].
-    pub async fn resolve(self) -> Result<RawVc> {
+    pub(crate) async fn resolve(self) -> Result<RawVc> {
         let tt = turbo_tasks();
         let mut current = self;
         let mut notified = false;
@@ -242,8 +242,9 @@ impl RawVc {
             }
         }
     }
+
     /// See [`crate::Vc::resolve_strongly_consistent`].
-    pub async fn resolve_strongly_consistent(self) -> Result<RawVc> {
+    pub(crate) async fn resolve_strongly_consistent(self) -> Result<RawVc> {
         let tt = turbo_tasks();
         let mut current = self;
         let mut notified = false;
@@ -261,12 +262,12 @@ impl RawVc {
         }
     }
 
-    pub fn connect(&self) {
+    pub(crate) fn connect(&self) {
         let tt = turbo_tasks();
         tt.connect_task(self.get_task_id());
     }
 
-    pub fn is_resolved(&self) -> bool {
+    pub(crate) fn is_resolved(&self) -> bool {
         match self {
             RawVc::TaskOutput(_) => false,
             RawVc::TaskCell(_, _) => true,
@@ -284,8 +285,7 @@ impl CollectiblesSource for RawVc {
     fn peek_collectibles<T: VcValueTrait>(self) -> CollectiblesFuture<T> {
         let tt = turbo_tasks();
         tt.notify_scheduled_tasks();
-        let set: Vc<AutoSet<RawVc>> =
-            tt.read_task_collectibles(self.get_task_id(), T::get_trait_type_id());
+        let set = tt.read_task_collectibles(self.get_task_id(), T::get_trait_type_id());
         CollectiblesFuture {
             turbo_tasks: tt,
             inner: set.into_future(),
@@ -297,8 +297,7 @@ impl CollectiblesSource for RawVc {
     fn take_collectibles<T: VcValueTrait>(self) -> CollectiblesFuture<T> {
         let tt = turbo_tasks();
         tt.notify_scheduled_tasks();
-        let set: Vc<AutoSet<RawVc>> =
-            tt.read_task_collectibles(self.get_task_id(), T::get_trait_type_id());
+        let set = tt.read_task_collectibles(self.get_task_id(), T::get_trait_type_id());
         CollectiblesFuture {
             turbo_tasks: tt,
             inner: set.into_future(),
