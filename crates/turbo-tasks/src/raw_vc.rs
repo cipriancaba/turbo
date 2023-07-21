@@ -88,14 +88,6 @@ impl RawVc {
         ReadRawVcFuture::new(self)
     }
 
-    pub(crate) fn into_strongly_consistent_trait_read<T: VcValueTrait + Sized>(
-        self,
-    ) -> ReadRawVcFuture<T, VcValueTraitCast<T>> {
-        // returns a custom future to have something concrete and sized
-        // this avoids boxing in IntoFuture
-        ReadRawVcFuture::new_strongly_consistent(self)
-    }
-
     /// INVALIDATION: Be careful with this, it will not track dependencies, so
     /// using it could break cache invalidation.
     pub(crate) async fn into_read_untracked<T: Any + VcValueType>(
@@ -105,31 +97,6 @@ impl RawVc {
         self.into_read_untracked_internal(false, turbo_tasks)
             .await?
             .cast::<T>()
-    }
-
-    /// INVALIDATION: Be careful with this, it will not track dependencies, so
-    /// using it could break cache invalidation.
-    pub(crate) async fn into_strongly_consistent_read_untracked<T: Any + VcValueType>(
-        self,
-        turbo_tasks: &dyn TurboTasksApi,
-    ) -> Result<ReadRef<T>> {
-        self.into_read_untracked_internal(true, turbo_tasks)
-            .await?
-            .cast::<T>()
-    }
-
-    /// Returns the hash of the pointer that holds the Vc's current data. This
-    /// value will change every time the TaskCell recomputes.
-    ///
-    /// INVALIDATION: Be careful with this, it will not track dependencies, so
-    /// using it could break cache invalidation.
-    pub(crate) async fn internal_pointer_untracked(
-        self,
-        turbo_tasks: &dyn TurboTasksApi,
-    ) -> Result<SharedReference> {
-        let read = self.into_read_untracked_internal(true, turbo_tasks).await?;
-        read.0
-            .ok_or_else(|| anyhow!("failed to read cell content into hash"))
     }
 
     async fn into_read_untracked_internal(
@@ -265,13 +232,6 @@ impl RawVc {
     pub(crate) fn connect(&self) {
         let tt = turbo_tasks();
         tt.connect_task(self.get_task_id());
-    }
-
-    pub(crate) fn is_resolved(&self) -> bool {
-        match self {
-            RawVc::TaskOutput(_) => false,
-            RawVc::TaskCell(_, _) => true,
-        }
     }
 
     pub fn get_task_id(&self) -> TaskId {
