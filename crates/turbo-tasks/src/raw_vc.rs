@@ -9,7 +9,7 @@ use std::{
     task::Poll,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use auto_hash_map::AutoSet;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
