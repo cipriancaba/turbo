@@ -147,12 +147,15 @@ func HashTaskHashable(task *TaskHashable) (string, error) {
 			return "", err
 		}
 
-		assignList(task.Outputs.Exclusions, deps.SetExclusions, seg)
+		err = assignList(task.Outputs.Exclusions, deps.SetExclusions, seg)
 		if err != nil {
 			return "", err
 		}
 
-		taskMsg.SetOutputs(deps)
+		err = taskMsg.SetOutputs(deps)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	err = assignList(task.TaskDependencyHashes, taskMsg.SetTaskDependencyHashes, seg)
@@ -192,17 +195,16 @@ func HashTaskHashable(task *TaskHashable) (string, error) {
 //
 // NOTE: This function is _explicitly_ ordered and should not be sorted.
 //
-//		Order is important for the hash, and is as follows:
-//		- GlobalCacheKey
-//		- GlobalFileHashMap
-//		- RootExternalDepsHash
-//    - Env
-//    - ResolvedEnvVars
-//    - PassThroughEnv
-//    - EnvMode
-//    - FrameworkInference
-//    - DotEnv
-
+//			Order is important for the hash, and is as follows:
+//			- GlobalCacheKey
+//			- GlobalFileHashMap
+//			- RootExternalDepsHash
+//	   - Env
+//	   - ResolvedEnvVars
+//	   - PassThroughEnv
+//	   - EnvMode
+//	   - FrameworkInference
+//	   - DotEnv
 func HashGlobalHashable(global *GlobalHashable) (string, error) {
 	arena := capnp.SingleSegment(nil)
 
@@ -291,7 +293,8 @@ func HashGlobalHashable(global *GlobalHashable) (string, error) {
 	return HashMessage(globalMsg.Message())
 }
 
-func HashLockfilePackages(packages []lockfile.Package, isRoot bool) (string, error) {
+// HashLockfilePackages  performs the hash for []lockfile.Package, using capnproto for stable cross platform / language hashing
+func HashLockfilePackages(packages []lockfile.Package) (string, error) {
 	arena := capnp.SingleSegment(nil)
 
 	_, seg, err := capnp.NewMessage(arena)
@@ -324,6 +327,7 @@ func HashLockfilePackages(packages []lockfile.Package, isRoot bool) (string, err
 	return HashMessage(globalMsg.Message())
 }
 
+// HashFileHashes performs the hash for a map[turbopath.AnchoredUnixPath]string, using capnproto for stable cross platform / language hashing
 func HashFileHashes(fileHashes map[turbopath.AnchoredUnixPath]string) (string, error) {
 	arena := capnp.SingleSegment(nil)
 
@@ -366,6 +370,7 @@ func HashFileHashes(fileHashes map[turbopath.AnchoredUnixPath]string) (string, e
 	return HashMessage(globalMsg.Message())
 }
 
+// HashMessage takes a capnproto message and returns a hex encoded xxhash of the canonicalized bytes
 func HashMessage(msg *capnp.Message) (string, error) {
 	root, err := msg.Root()
 	if err != nil {
@@ -424,7 +429,10 @@ func assignList(list []string, fn func(capnp.TextList) error, seg *capnp.Segment
 		return err
 	}
 	for i, v := range list {
-		textList.Set(i, v)
+		err = textList.Set(i, v)
+		if err != nil {
+			return err
+		}
 	}
 	return fn(textList)
 }
@@ -435,7 +443,10 @@ func assignAnchoredUnixArray(paths turbopath.AnchoredUnixPathArray, fn func(capn
 		return err
 	}
 	for i, v := range paths {
-		textList.Set(i, v.ToString())
+		err = textList.Set(i, v.ToString())
+		if err != nil {
+			return err
+		}
 	}
 	return fn(textList)
 }

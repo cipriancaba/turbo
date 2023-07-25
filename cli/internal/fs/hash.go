@@ -21,8 +21,8 @@ type LockfilePackages []lockfile.Package
 type FileHashes map[turbopath.AnchoredUnixPath]string
 
 // HashLockfilePackages hashes a list of packages
-func HashLockfilePackages(packages LockfilePackages, isRoot bool) (string, error) {
-	return hash.HashLockfilePackages(packages, isRoot)
+func HashLockfilePackages(packages LockfilePackages) (string, error) {
+	return hash.HashLockfilePackages(packages)
 }
 
 // HashFileHashes produces a single hash for a set of file hashes

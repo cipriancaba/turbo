@@ -122,10 +122,6 @@ func MarshalPackageJSON(pkgJSON *PackageJSON) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func truncate(s []lockfile.Package, to int) []lockfile.Package {
-	return s[:to]
-}
-
 // SetExternalDeps sets TransitiveDeps and populates ExternalDepsHash
 func (p *PackageJSON) SetExternalDeps(externalDeps mapset.Set) error {
 	p.Mu.Lock()
@@ -147,7 +143,7 @@ func (p *PackageJSON) SetExternalDeps(externalDeps mapset.Set) error {
 	//	Version: "dummy",
 	//})
 
-	hashOfExternalDeps, err := HashLockfilePackages(p.TransitiveDeps, p.Name == "my-turborepo")
+	hashOfExternalDeps, err := HashLockfilePackages(p.TransitiveDeps)
 	if err != nil {
 		return err
 	}
