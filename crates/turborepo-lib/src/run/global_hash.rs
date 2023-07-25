@@ -29,7 +29,7 @@ enum GlobalHashError {}
 pub struct GlobalHashableInputs {
     global_cache_key: &'static str,
     global_file_hash_map: HashMap<RelativeUnixPathBuf, String>,
-    pub root_external_dependencies_hash: u64,
+    pub root_external_dependencies_hash: String,
     env: Vec<String>,
     // Only Option to allow #[derive(Default)]
     resolved_env_vars: Option<DetailedMap>,
@@ -112,16 +112,13 @@ pub fn get_global_hash_inputs<L: ?Sized + Lockfile>(
 
     debug!(
         "rust external deps hash: {}",
-        hex::encode(root_external_dependencies_hash.to_le_bytes())
+        root_external_dependencies_hash
     );
-
-    let root_external_dependencies_hash =
-        hex::encode(root_external_dependencies_hash.to_be_bytes());
 
     Ok(GlobalHashableInputs {
         global_cache_key: GLOBAL_CACHE_KEY,
         global_file_hash_map,
-        root_external_dependencies_hash: 0,
+        root_external_dependencies_hash,
         env: global_env,
         resolved_env_vars: Some(global_hashable_env_vars),
         pass_through_env: Some(global_pass_through_env),
@@ -132,7 +129,7 @@ pub fn get_global_hash_inputs<L: ?Sized + Lockfile>(
 }
 
 impl GlobalHashableInputs {
-    pub fn calculate_global_hash_from_inputs(mut self) -> u64 {
+    pub fn calculate_global_hash_from_inputs(mut self) -> String {
         match self.env_mode {
             EnvMode::Infer
                 if self
@@ -156,7 +153,7 @@ impl GlobalHashableInputs {
         self.calculate_global_hash()
     }
 
-    fn calculate_global_hash(self) -> u64 {
+    fn calculate_global_hash(self) -> String {
         let global_hashable = GlobalHashable {
             global_cache_key: self.global_cache_key.to_string(),
             global_file_hash_map: self.global_file_hash_map,

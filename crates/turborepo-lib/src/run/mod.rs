@@ -126,7 +126,7 @@ impl Run {
         Ok(())
     }
 
-    pub fn get_global_hash(&self) -> Result<u64> {
+    pub fn get_global_hash(&self) -> Result<String> {
         let env_at_execution_start = EnvironmentVariableMap::infer();
 
         let package_json_path = self.base.repo_root.join_component("package.json");

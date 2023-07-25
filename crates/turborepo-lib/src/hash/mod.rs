@@ -64,7 +64,7 @@ struct TaskHashable {
 pub struct GlobalHashable {
     pub global_cache_key: String,
     pub global_file_hash_map: HashMap<turbopath::RelativeUnixPathBuf, String>,
-    pub root_external_dependencies_hash: u64,
+    pub root_external_dependencies_hash: String,
     pub env: Vec<String>,
     pub resolved_env_vars: Vec<String>,
     pub pass_through_env: Vec<String>,
@@ -285,7 +285,7 @@ impl From<GlobalHashable> for Builder<HeapAllocator> {
             }
         }
 
-        builder.set_root_external_deps_hash(hashable.root_external_dependencies_hash);
+        builder.set_root_external_deps_hash(&hashable.root_external_dependencies_hash);
 
         {
             let mut entries = builder.reborrow().init_env(hashable.env.len() as u32);
